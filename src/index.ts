@@ -25,6 +25,7 @@ export type {
   ResponseCreateOptions,
   ResponseTextEvent,
   ResponseSourcesEvent,
+  ResponseThinkingEvent,
   ResponseErrorEvent,
   ResponseDoneEvent,
   ResponseEvent,

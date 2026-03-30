@@ -159,6 +159,8 @@ export interface SearchResponse {
 
 export interface ResponseCreateOptions {
   method?: IndexMethod;
+  model?: 'fast' | 'pro';
+  reasoning?: boolean;
   message: string;
   limit?: number;
   document_ids?: string[];
@@ -176,6 +178,11 @@ export interface ResponseSourcesEvent {
   sources: SearchResult[];
 }
 
+export interface ResponseThinkingEvent {
+  type: 'thinking';
+  content: string;
+}
+
 export interface ResponseErrorEvent {
   type: 'error';
   content: string;
@@ -187,6 +194,7 @@ export interface ResponseDoneEvent {
 
 export type ResponseEvent =
   | ResponseTextEvent
+  | ResponseThinkingEvent
   | ResponseSourcesEvent
   | ResponseErrorEvent
   | ResponseDoneEvent;

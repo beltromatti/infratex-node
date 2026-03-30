@@ -79,14 +79,18 @@ export class Responses {
    * Returns a `ResponseStream` which is an async iterable of events.
    */
   async create(options: ResponseCreateOptions): Promise<ResponseStream> {
-    const res = await this.http.postStream('/api/v1/responses', {
+    const body: Record<string, unknown> = {
       method: options.method ?? 'vector',
+      model: options.model ?? 'fast',
       message: options.message,
       limit: options.limit ?? 5,
-      document_ids: options.document_ids,
-      collection_id: options.collection_id,
-      conversation_id: options.conversation_id,
-    });
+    };
+    if (options.reasoning) body.reasoning = true;
+    if (options.document_ids) body.document_ids = options.document_ids;
+    if (options.collection_id) body.collection_id = options.collection_id;
+    if (options.conversation_id) body.conversation_id = options.conversation_id;
+
+    const res = await this.http.postStream('/api/v1/responses', body);
 
     return new ResponseStream(res);
   }
