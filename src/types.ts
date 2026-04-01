@@ -28,6 +28,7 @@ export interface InfratexErrorBody {
 export type ParseMethod = 'legacy' | 'experimental' | 'standard' | 'cost-efficient';
 export type BasePipeline = 'traditional' | 'math';
 export type DocStatus = 'pending' | 'processing' | 'done' | 'parsed' | 'indexed' | 'error';
+export type IndexStatus = 'pending' | 'processing' | 'indexed' | 'error';
 
 export interface DocumentRegion {
   id: number;
@@ -74,6 +75,7 @@ export interface Document {
   index_method: string | null;
   collection_id: string | null;
   extraction_pages: DocumentExtractionPage[] | null;
+  indexes?: DocumentIndex[];
 }
 
 export interface DocumentListResponse {
@@ -105,21 +107,29 @@ export interface DocumentListOptions {
 
 export type IndexMethod = 'vector' | 'hybrid';
 
-export interface IndexCreateOptions {
-  method: IndexMethod;
-}
-
-export interface IndexResponse {
+export interface DocumentIndex {
+  id: string;
   document_id: string;
-  filename: string;
+  filename?: string | null;
   method: IndexMethod;
-  status: string;
-  node_count: number;
-  chunk_count: number;
+  status: IndexStatus;
+  node_count: number | null;
+  chunk_count: number | null;
   has_ast: boolean;
   has_description: boolean;
+  processing_time_ms: number | null;
   processing_ms: number;
+  error_message?: string | null;
+  created_at: string;
+  updated_at: string;
 }
+
+export interface IndexCreateOptions {
+  method: IndexMethod;
+  wait?: boolean;
+}
+
+export type IndexResponse = DocumentIndex & { filename: string };
 
 // ---------------------------------------------------------------------------
 // Search

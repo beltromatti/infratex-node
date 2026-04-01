@@ -27,6 +27,7 @@ const doc = await client.documents.upload('./report.pdf');
 console.log(doc.id, doc.page_count, 'pages');
 
 // Index for search
+// The SDK waits for the queued index by default.
 await client.documents.index(doc.id, { method: 'vector' });
 
 // Search
@@ -34,6 +35,7 @@ const { results } = await client.searches.create({
   query: 'quarterly revenue',
   method: 'vector',
   limit: 5,
+  document_ids: [doc.id],
 });
 
 // Stream an AI response
@@ -80,6 +82,11 @@ await client.documents.delete('doc-id');
 
 // Create a search index
 const index = await client.documents.index('doc-id', { method: 'vector' });
+
+// Queue-first behavior if you want to manage polling yourself
+const queued = await client.documents.index('doc-id', { method: 'hybrid', wait: false });
+const indexes = await client.documents.listIndexes('doc-id');
+const ready = await client.documents.getIndex('doc-id', 'hybrid', { wait: true });
 ```
 
 ### Search
@@ -133,6 +140,8 @@ const stream = await client.responses.create({
   model: 'pro',
 });
 ```
+
+`documents.index(...)` mirrors `documents.upload(...)`: the raw HTTP API is async-first, but the SDK preserves the default one-call flow and only exposes queue-first control when you need it.
 
 ### Collections
 

@@ -3,6 +3,7 @@ import { basename } from 'node:path';
 import { HttpClient, InfratexError } from '../http.js';
 import type {
   Document,
+  DocumentIndex,
   DocumentListOptions,
   DocumentListResponse,
   IndexCreateOptions,
@@ -63,12 +64,16 @@ export class Documents {
    * List documents with optional filtering and pagination.
    */
   async list(options?: DocumentListOptions): Promise<DocumentListResponse> {
-    return this.http.get<DocumentListResponse>('/api/v1/documents', {
+    const response = await this.http.get<DocumentListResponse>('/api/v1/documents', {
       status: options?.status,
       collection_id: options?.collection_id,
       limit: options?.limit,
       offset: options?.offset,
     });
+    return {
+      ...response,
+      documents: response.documents.map((document) => this.normalizeDocument(document)),
+    };
   }
 
   /**
@@ -76,7 +81,7 @@ export class Documents {
    * Markdown is fetched separately through `markdown(id)`.
    */
   async get(id: string): Promise<Document> {
-    return this.http.get<Document>(`/api/v1/documents/${id}`);
+    return this.normalizeDocument(await this.http.get<Document>(`/api/v1/documents/${id}`));
   }
 
   /**
@@ -97,9 +102,29 @@ export class Documents {
    * Create or rebuild an index on a parsed document.
    */
   async index(id: string, options: IndexCreateOptions): Promise<IndexResponse> {
-    return this.http.post<IndexResponse>(`/api/v1/documents/${id}/indexes`, {
+    const created = this.normalizeIndex(await this.http.post<IndexResponse>(`/api/v1/documents/${id}/indexes`, {
       method: options.method,
-    });
+    }));
+    if (options.wait === false) {
+      return created;
+    }
+    return this.getIndex(id, options.method, { wait: true });
+  }
+
+  async listIndexes(id: string): Promise<DocumentIndex[]> {
+    const indexes = await this.http.get<DocumentIndex[]>(`/api/v1/documents/${id}/indexes`);
+    return indexes.map((index) => this.normalizeIndex(index));
+  }
+
+  async getIndex(
+    id: string,
+    method: 'vector' | 'hybrid',
+    options?: { wait?: boolean },
+  ): Promise<IndexResponse> {
+    if (options?.wait) {
+      return this.waitForDocumentIndex(id, method);
+    }
+    return this.normalizeIndex(await this.http.get<IndexResponse>(`/api/v1/documents/${id}/indexes/${method}`));
   }
 
   private async waitForUploadedDocument(id: string): Promise<UploadResponse> {
@@ -136,5 +161,47 @@ export class Documents {
 
       await new Promise((resolve) => setTimeout(resolve, this.pollIntervalMs));
     }
+  }
+
+  private async waitForDocumentIndex(
+    id: string,
+    method: 'vector' | 'hybrid',
+  ): Promise<IndexResponse> {
+    const deadline = Date.now() + this.http.timeoutMs;
+
+    while (true) {
+      const index = await this.getIndex(id, method);
+      if (index.status === 'indexed') {
+        return index;
+      }
+
+      if (index.status === 'error') {
+        throw new InfratexError(
+          index.error_message ?? 'Indexing failed',
+          409,
+          'index_failed',
+        );
+      }
+
+      if (Date.now() >= deadline) {
+        throw new InfratexError('Indexing timed out', 504, 'index_timeout');
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, this.pollIntervalMs));
+    }
+  }
+
+  private normalizeIndex<T extends DocumentIndex>(index: T): T {
+    return {
+      ...index,
+      processing_ms: index.processing_ms ?? index.processing_time_ms ?? 0,
+    };
+  }
+
+  private normalizeDocument(document: Document): Document {
+    return {
+      ...document,
+      indexes: document.indexes?.map((index) => this.normalizeIndex(index)),
+    };
   }
 }
