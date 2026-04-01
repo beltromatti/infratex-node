@@ -1,4 +1,5 @@
 import { HttpClient } from '../http.js';
+import { validateScope } from '../scope.js';
 import type {
   Conversation,
   ConversationCreateOptions,
@@ -12,8 +13,15 @@ export class Conversations {
    * Create a new conversation thread.
    */
   async create(options?: ConversationCreateOptions): Promise<Conversation> {
+    const scope = validateScope({
+      document_ids: options?.document_ids,
+      collection_id: options?.collection_id,
+    });
+
     return this.http.post<Conversation>('/api/v1/conversations', {
       title: options?.title ?? 'New Chat',
+      document_ids: scope.document_ids,
+      collection_id: scope.collection_id,
     });
   }
 

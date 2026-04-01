@@ -87,8 +87,7 @@ const response = await client.searches.create({
   query: 'revenue growth',
   method: 'vector',   // or 'hybrid'
   limit: 10,
-  document_ids: ['doc-1', 'doc-2'],  // optional scope
-  collection_id: 'col-id',           // optional scope
+  document_ids: ['doc-1', 'doc-2'],
 });
 ```
 
@@ -99,7 +98,7 @@ const stream = await client.responses.create({
   message: 'What are the key risks?',
   method: 'vector',
   limit: 5,
-  conversation_id: 'conv-id',  // optional, for multi-turn
+  document_ids: ['doc-id'],
 });
 
 for await (const event of stream) {
@@ -108,7 +107,7 @@ for await (const event of stream) {
       process.stdout.write(event.content);
       break;
     case 'sources':
-      console.log('Sources:', event.sources);
+      console.log('Sources:', event.content);
       break;
     case 'error':
       console.error(event.content);
@@ -117,6 +116,20 @@ for await (const event of stream) {
       break;
   }
 }
+```
+
+```typescript
+const conv = await client.conversations.create({
+  title: 'Quarterly Analysis',
+  collection_id: 'col-id',
+});
+
+const stream = await client.responses.create({
+  conversation_id: conv.id,
+  message: 'How does that compare with the previous quarter?',
+  method: 'hybrid',
+  model: 'pro',
+});
 ```
 
 ### Collections
@@ -132,7 +145,7 @@ await client.collections.delete('col-id');
 ### Conversations
 
 ```typescript
-const conv = await client.conversations.create({ title: 'Analysis' });
+const conv = await client.conversations.create({ title: 'Analysis', collection_id: 'col-id' });
 const convs = await client.conversations.list();
 const full = await client.conversations.get('conv-id');  // includes messages
 await client.conversations.delete('conv-id');

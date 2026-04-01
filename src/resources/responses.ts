@@ -1,4 +1,5 @@
 import { HttpClient } from '../http.js';
+import { validateScope } from '../scope.js';
 import type { ResponseCreateOptions, ResponseEvent } from '../types.js';
 
 /**
@@ -79,6 +80,12 @@ export class Responses {
    * Returns a `ResponseStream` which is an async iterable of events.
    */
   async create(options: ResponseCreateOptions): Promise<ResponseStream> {
+    const scope = validateScope({
+      document_ids: options.document_ids,
+      collection_id: options.collection_id,
+      conversation_id: options.conversation_id,
+    });
+
     const body: Record<string, unknown> = {
       method: options.method ?? 'vector',
       model: options.model ?? 'fast',
@@ -86,8 +93,8 @@ export class Responses {
       limit: options.limit ?? 5,
     };
     if (options.reasoning) body.reasoning = true;
-    if (options.document_ids) body.document_ids = options.document_ids;
-    if (options.collection_id) body.collection_id = options.collection_id;
+    if (scope.document_ids) body.document_ids = scope.document_ids;
+    if (scope.collection_id) body.collection_id = scope.collection_id;
     if (options.conversation_id) body.conversation_id = options.conversation_id;
 
     const res = await this.http.postStream('/api/v1/responses', body);

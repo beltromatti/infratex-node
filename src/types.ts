@@ -139,13 +139,26 @@ export interface SearchResult {
   source: string;
 }
 
-export interface SearchCreateOptions {
+export type ScopeSelector =
+  | { document_ids?: string[]; collection_id?: never }
+  | { document_ids?: never; collection_id?: string }
+  | { document_ids?: never; collection_id?: never };
+
+export type ConversationBoundScope = {
+  conversation_id: string;
+  document_ids?: never;
+  collection_id?: never;
+};
+
+export type RequestScopedResponse =
+  | ({ conversation_id?: undefined } & ScopeSelector)
+  | ConversationBoundScope;
+
+export type SearchCreateOptions = {
   method?: IndexMethod;
   query: string;
   limit?: number;
-  document_ids?: string[];
-  collection_id?: string;
-}
+} & ScopeSelector;
 
 export interface SearchResponse {
   method: IndexMethod;
@@ -157,15 +170,21 @@ export interface SearchResponse {
 // Responses (AI generation, SSE)
 // ---------------------------------------------------------------------------
 
-export interface ResponseCreateOptions {
+export type ResponseCreateOptions = {
   method?: IndexMethod;
   model?: 'fast' | 'pro';
   reasoning?: boolean;
   message: string;
   limit?: number;
-  document_ids?: string[];
-  collection_id?: string;
-  conversation_id?: string;
+} & RequestScopedResponse;
+
+export interface ResponseSourceCitation {
+  id: number;
+  document_id: string;
+  document_name: string;
+  snippet: string;
+  node_id?: string;
+  title?: string;
 }
 
 export interface ResponseTextEvent {
@@ -175,7 +194,7 @@ export interface ResponseTextEvent {
 
 export interface ResponseSourcesEvent {
   type: 'sources';
-  sources: SearchResult[];
+  content: ResponseSourceCitation[];
 }
 
 export interface ResponseThinkingEvent {
@@ -221,27 +240,32 @@ export interface CollectionUpdateOptions {
 // Conversations
 // ---------------------------------------------------------------------------
 
-export interface Message {
+export interface ConversationMessage {
   id: string;
   role: string;
   content: string;
   created_at: string;
+  metadata: Record<string, unknown> | null;
 }
 
 export interface Conversation {
   id: string;
   title: string;
+  collection_id: string | null;
+  document_ids: string[];
   created_at: string;
   updated_at: string;
 }
 
 export interface ConversationDetail extends Conversation {
-  messages: Message[];
+  messages: ConversationMessage[];
 }
 
-export interface ConversationCreateOptions {
+export type ConversationCreateOptions = {
   title?: string;
-}
+} & ScopeSelector;
+
+export type Message = ConversationMessage;
 
 // ---------------------------------------------------------------------------
 // Account
