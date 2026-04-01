@@ -73,7 +73,6 @@ export interface Document {
   chunk_count: number | null;
   index_method: string | null;
   collection_id: string | null;
-  markdown: string | null;
   extraction_pages: DocumentExtractionPage[] | null;
 }
 

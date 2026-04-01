@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { basename } from 'node:path';
-import { HttpClient } from '../http.js';
+import { HttpClient, InfratexError } from '../http.js';
 import type {
   Document,
   DocumentListOptions,
@@ -12,6 +12,8 @@ import type {
 } from '../types.js';
 
 export class Documents {
+  private readonly pollIntervalMs = 1000;
+
   constructor(private readonly http: HttpClient) {}
 
   /**
@@ -53,7 +55,8 @@ export class Documents {
     if (options?.pipeline) form.append('pipeline', options.pipeline);
     if (options?.collection_id) form.append('collection_id', options.collection_id);
 
-    return this.http.postMultipart<UploadResponse>('/api/v1/documents', form);
+    const created = await this.http.postMultipart<Document>('/api/v1/documents', form);
+    return this.waitForUploadedDocument(created.id);
   }
 
   /**
@@ -69,7 +72,8 @@ export class Documents {
   }
 
   /**
-   * Get a single document by ID (includes markdown if available).
+   * Get a single document by ID.
+   * Markdown is fetched separately through `markdown(id)`.
    */
   async get(id: string): Promise<Document> {
     return this.http.get<Document>(`/api/v1/documents/${id}`);
@@ -96,5 +100,41 @@ export class Documents {
     return this.http.post<IndexResponse>(`/api/v1/documents/${id}/indexes`, {
       method: options.method,
     });
+  }
+
+  private async waitForUploadedDocument(id: string): Promise<UploadResponse> {
+    const deadline = Date.now() + this.http.timeoutMs;
+
+    while (true) {
+      const document = await this.get(id);
+      if (document.status === 'done' || document.status === 'parsed' || document.status === 'indexed') {
+        return {
+          id: document.id,
+          status: document.status,
+          method: document.method,
+          filename: document.filename,
+          pipeline: document.pipeline,
+          page_count: document.page_count,
+          markdown: await this.markdown(id),
+          extraction_ms: document.processing_time_ms ?? 0,
+          collection_id: document.collection_id,
+          extraction_pages: document.extraction_pages,
+        };
+      }
+
+      if (document.status === 'error') {
+        throw new InfratexError(
+          document.error_message ?? 'Document processing failed',
+          409,
+          'document_processing_failed',
+        );
+      }
+
+      if (Date.now() >= deadline) {
+        throw new InfratexError('Document processing timed out', 504, 'upload_timeout');
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, this.pollIntervalMs));
+    }
   }
 }

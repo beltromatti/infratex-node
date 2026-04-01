@@ -61,6 +61,8 @@ for await (const event of stream) {
 
 ```typescript
 // Upload from file path or Buffer
+// The SDK keeps this as a single awaited call even though the raw HTTP API
+// now creates the document first and polls until parsing completes.
 const doc = await client.documents.upload('/path/to/file.pdf');
 const doc = await client.documents.upload(buffer, { filename: 'report.pdf', method: 'standard' });
 

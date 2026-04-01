@@ -50,6 +50,10 @@ export class HttpClient {
     this.timeout = options.timeout;
   }
 
+  get timeoutMs(): number {
+    return this.timeout;
+  }
+
   // -- helpers --------------------------------------------------------------
 
   private headers(extra?: Record<string, string>): Record<string, string> {
