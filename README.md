@@ -67,6 +67,7 @@ for await (const event of stream) {
 // now creates the document first and polls until parsing completes.
 const doc = await client.documents.upload('/path/to/file.pdf');
 const doc = await client.documents.upload(buffer, { filename: 'report.pdf', method: 'standard' });
+const richDoc = await client.documents.upload('/path/to/deck.pdf', { method: 'max' });
 
 // Queue-first upload if you want to manage the parse lifecycle yourself
 const queued = await client.documents.upload('/path/to/file.pdf', { wait: false });
@@ -146,6 +147,8 @@ const stream = await client.responses.create({
 ```
 
 `documents.upload(...)` and `documents.index(...)` now follow the same contract: both wait by default, both support queue-first behavior with `wait: false`, and both expose a matching getter with `wait: true` if you want to resume later.
+
+Use `method: 'max'` when you want the Gemini parser to preserve the normal extracted text while also appending concise `[visual-note: ...]` lines for meaningful charts, figures, screenshots, and photos.
 
 ### Collections
 

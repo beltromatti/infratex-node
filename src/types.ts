@@ -25,7 +25,7 @@ export interface InfratexErrorBody {
 // Documents
 // ---------------------------------------------------------------------------
 
-export type ParseMethod = 'legacy' | 'experimental' | 'standard' | 'cost-efficient';
+export type ParseMethod = 'legacy' | 'experimental' | 'standard' | 'max' | 'cost-efficient';
 export type BasePipeline = 'traditional' | 'math';
 export type DocStatus = 'pending' | 'processing' | 'done' | 'parsed' | 'indexed' | 'error';
 export type IndexStatus = 'pending' | 'processing' | 'indexed' | 'error';
