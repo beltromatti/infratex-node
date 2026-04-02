@@ -25,14 +25,22 @@ export class Documents {
    *
    * @example
    * ```ts
-   * const doc = await client.documents.upload('/path/to/report.pdf');
-   * const doc = await client.documents.upload(buffer, { filename: 'report.pdf' });
-   * ```
-   */
+  * const doc = await client.documents.upload('/path/to/report.pdf');
+  * const doc = await client.documents.upload(buffer, { filename: 'report.pdf' });
+  * ```
+  */
+  async upload(
+    file: string | Buffer,
+    options: UploadOptions & { wait: false },
+  ): Promise<Document>;
   async upload(
     file: string | Buffer,
     options?: UploadOptions,
-  ): Promise<UploadResponse> {
+  ): Promise<UploadResponse>;
+  async upload(
+    file: string | Buffer,
+    options?: UploadOptions,
+  ): Promise<Document | UploadResponse> {
     const form = new FormData();
 
     let bytes: Uint8Array<ArrayBuffer>;
@@ -57,7 +65,10 @@ export class Documents {
     if (options?.collection_id) form.append('collection_id', options.collection_id);
 
     const created = await this.http.postMultipart<Document>('/api/v1/documents', form);
-    return this.waitForUploadedDocument(created.id);
+    if (options?.wait === false) {
+      return this.normalizeDocument(created);
+    }
+    return this.get(created.id, { wait: true });
   }
 
   /**
@@ -80,7 +91,15 @@ export class Documents {
    * Get a single document by ID.
    * Markdown is fetched separately through `markdown(id)`.
    */
-  async get(id: string): Promise<Document> {
+  async get(id: string, options: { wait: true }): Promise<UploadResponse>;
+  async get(id: string, options?: { wait?: false }): Promise<Document>;
+  async get(
+    id: string,
+    options?: { wait?: boolean },
+  ): Promise<Document | UploadResponse> {
+    if (options?.wait) {
+      return this.waitForUploadedDocument(id);
+    }
     return this.normalizeDocument(await this.http.get<Document>(`/api/v1/documents/${id}`));
   }
 

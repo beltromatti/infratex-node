@@ -92,6 +92,8 @@ export interface UploadOptions {
   pipeline?: BasePipeline;
   /** Assign to a collection on upload. */
   collection_id?: string;
+  /** When false, return the queued document resource immediately. */
+  wait?: boolean;
 }
 
 export interface DocumentListOptions {

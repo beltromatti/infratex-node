@@ -68,6 +68,10 @@ for await (const event of stream) {
 const doc = await client.documents.upload('/path/to/file.pdf');
 const doc = await client.documents.upload(buffer, { filename: 'report.pdf', method: 'standard' });
 
+// Queue-first upload if you want to manage the parse lifecycle yourself
+const queued = await client.documents.upload('/path/to/file.pdf', { wait: false });
+const ready = await client.documents.get(queued.id, { wait: true });
+
 // List with pagination and filters
 const { documents, total } = await client.documents.list({ limit: 50, status: 'parsed' });
 
@@ -141,7 +145,7 @@ const stream = await client.responses.create({
 });
 ```
 
-`documents.index(...)` mirrors `documents.upload(...)`: the raw HTTP API is async-first, but the SDK preserves the default one-call flow and only exposes queue-first control when you need it.
+`documents.upload(...)` and `documents.index(...)` now follow the same contract: both wait by default, both support queue-first behavior with `wait: false`, and both expose a matching getter with `wait: true` if you want to resume later.
 
 ### Collections
 
