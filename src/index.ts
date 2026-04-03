@@ -1,6 +1,7 @@
 export { Infratex } from './client.js';
 export { InfratexError } from './http.js';
 export { ResponseStream } from './resources/responses.js';
+export { SDK_VERSION } from './version.js';
 
 // Re-export all types
 export type {

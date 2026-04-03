@@ -1,4 +1,5 @@
 import type { InfratexErrorBody } from './types.js';
+import { SDK_VERSION } from './version.js';
 
 // ---------------------------------------------------------------------------
 // Custom error class
@@ -59,6 +60,7 @@ export class HttpClient {
   private headers(extra?: Record<string, string>): Record<string, string> {
     return {
       Authorization: `Bearer ${this.apiKey}`,
+      'User-Agent': `infratex-node/${SDK_VERSION}`,
       ...extra,
     };
   }
