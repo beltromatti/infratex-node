@@ -16,6 +16,7 @@ export type {
   Document,
   DocumentListResponse,
   UploadOptions,
+  ImageUploadOptions,
   DocumentListOptions,
   IndexMethod,
   IndexCreateOptions,

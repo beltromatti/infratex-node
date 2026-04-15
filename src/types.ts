@@ -96,6 +96,15 @@ export interface UploadOptions {
   wait?: boolean;
 }
 
+export interface ImageUploadOptions {
+  /** Parse method. Image uploads support only `standard` and `max`. */
+  method?: 'standard' | 'max';
+  /** Assign to a collection on upload. */
+  collection_id?: string;
+  /** When false, return the queued document resource immediately. */
+  wait?: boolean;
+}
+
 export interface DocumentListOptions {
   status?: DocStatus;
   collection_id?: string;

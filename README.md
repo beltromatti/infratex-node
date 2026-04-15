@@ -3,6 +3,7 @@
 Official Node.js / TypeScript SDK for the [Infratex](https://infratex.io) document intelligence API.
 
 - Parse PDFs into structured markdown
+- Parse ordered image batches into structured markdown
 - Build vector and hybrid search indexes
 - Semantic search across your documents
 - Stream AI-generated responses grounded in your data
@@ -25,6 +26,12 @@ const client = new Infratex({ apiKey: 'infratex_sk_...' });
 // Upload and parse a PDF
 const doc = await client.documents.upload('./report.pdf');
 console.log(doc.id, doc.page_count, 'pages');
+
+// Upload an ordered image batch as document pages
+const deck = await client.documents.uploadImages(['./page-1.png', './page-2.png'], {
+  method: 'max',
+});
+console.log(deck.id, deck.page_count, 'pages');
 
 // Index for search
 // The SDK waits for the queued index by default.
@@ -69,9 +76,20 @@ const doc = await client.documents.upload('/path/to/file.pdf');
 const doc = await client.documents.upload(buffer, { filename: 'report.pdf', method: 'standard' });
 const richDoc = await client.documents.upload('/path/to/deck.pdf', { method: 'max' });
 
+// Upload ordered images instead of a PDF
+const images = await client.documents.uploadImages(['/tmp/page-1.png', '/tmp/page-2.png']);
+const richImages = await client.documents.uploadImages(['/tmp/page-1.png', '/tmp/page-2.png'], {
+  method: 'max',
+  collection_id: 'col-id',
+});
+
 // Queue-first upload if you want to manage the parse lifecycle yourself
 const queued = await client.documents.upload('/path/to/file.pdf', { wait: false });
 const ready = await client.documents.get(queued.id, { wait: true });
+
+// Queue-first image upload follows the same pattern
+const queuedImages = await client.documents.uploadImages(['/tmp/page-1.png', '/tmp/page-2.png'], { wait: false });
+const readyImages = await client.documents.get(queuedImages.id, { wait: true });
 
 // List with pagination and filters
 const { documents, total } = await client.documents.list({ limit: 50, status: 'parsed' });
@@ -146,9 +164,9 @@ const stream = await client.responses.create({
 });
 ```
 
-`documents.upload(...)` and `documents.index(...)` now follow the same contract: both wait by default, both support queue-first behavior with `wait: false`, and both expose a matching getter with `wait: true` if you want to resume later.
+`documents.upload(...)`, `documents.uploadImages(...)`, and `documents.index(...)` now follow the same contract: they wait by default, support queue-first behavior with `wait: false`, and expose a matching getter with `wait: true` if you want to resume later.
 
-Use `method: 'max'` when you want the Gemini parser to preserve the normal extracted text while also appending concise `[visual-note: ...]` lines for meaningful charts, figures, screenshots, and photos.
+Use `method: 'max'` when you want the Gemini parser to preserve the normal extracted text while also appending brief `[visual-note: ...]` lines for meaningful charts, figures, screenshots, and photos.
 
 ### Collections
 

@@ -6,6 +6,7 @@ import type {
   DocumentIndex,
   DocumentListOptions,
   DocumentListResponse,
+  ImageUploadOptions,
   IndexCreateOptions,
   IndexResponse,
   UploadOptions,
@@ -41,23 +42,8 @@ export class Documents {
     file: string | Buffer,
     options?: UploadOptions,
   ): Promise<Document | UploadResponse> {
+    const { bytes, filename } = await this.loadUploadInput(file, options?.filename, 'upload.pdf');
     const form = new FormData();
-
-    let bytes: Uint8Array<ArrayBuffer>;
-    let filename: string;
-
-    if (typeof file === 'string') {
-      const data = await readFile(file);
-      filename = options?.filename ?? basename(file);
-      // Copy into a clean ArrayBuffer to satisfy Blob constructor types
-      bytes = new Uint8Array(data.byteLength);
-      bytes.set(data);
-    } else {
-      filename = options?.filename ?? 'upload.pdf';
-      bytes = new Uint8Array(file.byteLength);
-      bytes.set(file);
-    }
-
     form.append('file', new Blob([bytes], { type: 'application/pdf' }), filename);
 
     if (options?.method) form.append('method', options.method);
@@ -65,6 +51,45 @@ export class Documents {
     if (options?.collection_id) form.append('collection_id', options.collection_id);
 
     const created = await this.http.postMultipart<Document>('/api/v1/documents', form);
+    if (options?.wait === false) {
+      return this.normalizeDocument(created);
+    }
+    return this.get(created.id, { wait: true });
+  }
+
+  async uploadImages(
+    files: string[],
+    options: ImageUploadOptions & { wait: false },
+  ): Promise<Document>;
+  async uploadImages(
+    files: string[],
+    options?: ImageUploadOptions,
+  ): Promise<UploadResponse>;
+  async uploadImages(
+    files: string[],
+    options?: ImageUploadOptions,
+  ): Promise<Document | UploadResponse> {
+    if (files.length === 0) {
+      throw new Error('files must contain at least one image path');
+    }
+
+    const method = options?.method ?? 'standard';
+    if (method !== 'standard' && method !== 'max') {
+      throw new Error("image uploads support only 'standard' and 'max'");
+    }
+
+    const form = new FormData();
+    for (const file of files) {
+      const { bytes, filename } = await this.loadUploadInput(file, undefined, 'image');
+      form.append('files', new Blob([bytes], { type: this.guessImageMimeType(filename) }), filename);
+    }
+
+    form.append('method', method);
+    if (options?.collection_id) {
+      form.append('collection_id', options.collection_id);
+    }
+
+    const created = await this.http.postMultipart<Document>('/api/v1/documents/images', form);
     if (options?.wait === false) {
       return this.normalizeDocument(created);
     }
@@ -222,5 +247,35 @@ export class Documents {
       ...document,
       indexes: document.indexes?.map((index) => this.normalizeIndex(index)),
     };
+  }
+
+  private async loadUploadInput(
+    file: string | Buffer,
+    explicitFilename: string | undefined,
+    fallbackFilename: string,
+  ): Promise<{ bytes: Uint8Array<ArrayBuffer>; filename: string }> {
+    let bytes: Uint8Array<ArrayBuffer>;
+    let filename: string;
+
+    if (typeof file === 'string') {
+      const data = await readFile(file);
+      filename = explicitFilename ?? basename(file);
+      bytes = new Uint8Array(data.byteLength);
+      bytes.set(data);
+      return { bytes, filename };
+    }
+
+    filename = explicitFilename ?? fallbackFilename;
+    bytes = new Uint8Array(file.byteLength);
+    bytes.set(file);
+    return { bytes, filename };
+  }
+
+  private guessImageMimeType(filename: string): string {
+    const lower = filename.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    return 'application/octet-stream';
   }
 }
